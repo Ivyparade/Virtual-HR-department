@@ -1,13 +1,14 @@
 const mysql = require('mysql');
 const inquire = require('inquirer');
 
-const mainMenu = [
-    {
+const actions = [ {
         type: 'list',
         name: 'keyword',
         message: 'What would you like to do?',
-        choices: ['view', 'add', 'go back', 'exit']
-    },
+        choices: ['view', 'add', 'go back', 'update employee role','exit']
+    }]
+
+const mainMenu = [
     {
         type: 'list',
         message: 'please select a topic',
@@ -77,7 +78,7 @@ function tableAll(nombre, field) {
         'SELECT ' + nombre + ' name FROM ' + field,
         function(err, res) {
             if(err) throw err;
-            // console.table(res);
+            console.table(res);
             afterconnection();
         }
     );
@@ -97,9 +98,9 @@ function makeTables(arr, arr2, id) {
         arr + id,
         function(err, res) {
             if(err) throw err;
-            // console.table(res);
+            console.table(res);
             if(arr2) {
-                quest(arr2, false, id)
+                makeTables(arr2, false, id)
             } else afterconnection();
         }
     );
@@ -112,35 +113,54 @@ connection.connect((err) => {
 });
 
 function afterconnection() {
-    inquire.prompt(mainMenu)
-    .then(res => {
-        let { viewArr, viewArr2, nombre, field } = res.topic;
-        // console.log(nombre, field);
-    switch(res.keyword) {
-        case 'add':
-            console.log('add not implemented yet sorry')
-            afterconnection();
-            break;
-        case 'view':
-            dbIdInquiry(nombre, field, function(arr){
-                inquire.prompt(constructInquiry('Select '+ field, arr))
-                .then((res) => {
-                    // console.log(res);
-                    if(res.id){
-                    let id = res.id.toString()
-                    makeTables(viewArr, viewArr2, id);
-                    } else {tableAll(nombre, field)};
+    inquire.prompt(actions)
+    .then(action => {
+        switch(action.keyword){
+            case 'update employee role':
+                dbIdInquiry('CONCAT(first_name, " ", last_name)', 'employees', function(res){
+                    inquire.prompt(constructInquiry('Select employees', res))
+                    .then((emp) => {
+                        dbIdInquiry('title', 'roles', function(res){
+                            inquire.prompt(constructInquiry('Select new role', res))
+                            .then((role) =>{
+                                connection.query(
+                                'UPDATE employees SET role_id = "'+ role.id +'" WHERE id = "' + emp.id + '"',
+                                function(err, res){
+                                    if(err) throw err;
+                                    console.log('success!');
+                                    afterconnection();
+                                }
+                            )
+                        })
+                    })
                 })
             })
             break;
-        case 'go back':
-            afterconnection();
-            break;
-        case 'exit':
-            connection.end();
+            case 'exit':
+                connection.end()
+                break;
+            case 'go back':
+                afterconnection()
+                break;
+            case 'add':
+                console.log('add not implemented yet sorry')
+                afterconnection();
+                break;
+            case 'view':
+                inquire.prompt(mainMenu)
+                .then(res => {
+                    let { viewArr, viewArr2, nombre, field } = res.topic;
+                    dbIdInquiry(nombre, field, function(arr){
+                        inquire.prompt(constructInquiry('Select '+ field, arr))
+                        .then((res) => {
+                            console.log(res.id);
+                            if(res.id){
+                                let id = res.id.toString()
+                                makeTables(viewArr, viewArr2, id);
+                        } else {tableAll(nombre, field)};
+                    })
+                })
+            })
         }
     })
-};
-
-
-
+}
