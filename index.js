@@ -56,15 +56,6 @@ const connection = mysql.createConnection({
   database: 'employee_db'
 });
 
-
-
-
-
-function handleError(err){
-    console.log(err);
-    connection.end();
-}
-
 function dbIdInquiry(nombre, field, cb){
     connection.query(
         'SELECT '+ nombre +' n, id FROM ' + field,
@@ -74,21 +65,19 @@ function dbIdInquiry(nombre, field, cb){
             for(const obj in res) {
                 arr.push({name: res[obj].n, value: res[obj].id});
             };
-            inquire.prompt(constructInquiry('Select '+ field, arr))
-            .then((res) => {
-                let id = (res.id)
-                cb(id);
-            })
+            cb(arr);
         }
     );
 };
 
-function getAll(nombre, field) {
+function tableAll(nombre, field) {
+    // console.log('hello?');
+    // console.log(nombre, field);
     connection.query(
         'SELECT ' + nombre + ' name FROM ' + field,
         function(err, res) {
             if(err) throw err;
-            console.table(res);
+            // console.table(res);
             afterconnection();
         }
     );
@@ -103,13 +92,13 @@ function constructInquiry(message, arr) {
     }]
 }
 
-function quest(arr, arr2, id) {
+function makeTables(arr, arr2, id) {
     connection.query(
         arr + id,
         function(err, res) {
             if(err) throw err;
-            console.table(res);
-            if (arr2) {
+            // console.table(res);
+            if(arr2) {
                 quest(arr2, false, id)
             } else afterconnection();
         }
@@ -119,24 +108,29 @@ function quest(arr, arr2, id) {
 connection.connect((err) => {
     if(err) throw err;
     console.log('connected as id ' + connection.threadId);
-    afterconnection()
+    afterconnection();
 });
 
 function afterconnection() {
     inquire.prompt(mainMenu)
     .then(res => {
-        let { viewArr, viewArr2, nombre, field } = res.topic
+        let { viewArr, viewArr2, nombre, field } = res.topic;
+        // console.log(nombre, field);
     switch(res.keyword) {
         case 'add':
-            console.log('not implemented yet sorry')
+            console.log('add not implemented yet sorry')
             afterconnection();
             break;
         case 'view':
-            dbIdInquiry(nombre, field, function(res){
-                if(res){
-                    let id = res.toString()
-                    quest(viewArr, viewArr2, id);
-                } else getAll(nombre, field);
+            dbIdInquiry(nombre, field, function(arr){
+                inquire.prompt(constructInquiry('Select '+ field, arr))
+                .then((res) => {
+                    // console.log(res);
+                    if(res.id){
+                    let id = res.id.toString()
+                    makeTables(viewArr, viewArr2, id);
+                    } else {tableAll(nombre, field)};
+                })
             })
             break;
         case 'go back':
@@ -149,6 +143,4 @@ function afterconnection() {
 };
 
 
-
-// afterconnection()
 
